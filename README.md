@@ -44,11 +44,13 @@ cd Grafana-backup-via-API
 
 ```bash
 # Ubuntu/Debian
-sudo apt update && sudo apt install jq curl
+sudo apt update && sudo apt install jq curl git
 
 # CentOS/RHEL
-sudo yum install jq curl
+sudo yum install jq curl git-all
 ```
+
+
 
 ### Настройка прав доступа
 ```bash
