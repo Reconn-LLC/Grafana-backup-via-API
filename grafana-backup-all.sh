@@ -84,19 +84,22 @@ $SETCOLOR_TITLE_GREEN
 echo "|------------------The contact points hasnt been exported-----------------------|"
 $SETCOLOR_NORMAL
 
+if [ "$GIT_PUSH_ENABLED" = "true" ]; then
+     cd /srv/grf_bkp
 
-cd /srv/grf_bkp
+     СURRENT_REPO=$(git remote get-url origin 2>/dev/null)
 
-CURRENT_REPO=$(git remote get-url origin 2>/dev/null)
-
- if [ "$CURRENT_REPO" = "$YOUR_SCRIPT_REPO_SSH" ] || [ "$CURRENT_REPO" = "$YOUR_SCRIPT_REPO_HTTPS" ]; then
-   echo "please switch repo"
-   exit 1
- else
-   git add .
-   git commit -m 'Update configs'
-   git push
- fi
+     if [ "$CURRENT_REPO" = "$REPO_SSH" ] || [ "$CURRENT_REPO" = "$REPO_HTTPS" ]; then
+          echo "please switch repo"
+          exit 1
+     else
+          git add .
+          git commit -m 'Update configs'
+          git push
+     fi
+else 
+     echo "Skipping git operations."
+fi
 
  $SETCOLOR_TITLE
 echo "|----------------------------------FINISHED-------------------------------------|";
