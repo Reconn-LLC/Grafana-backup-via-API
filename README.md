@@ -59,11 +59,11 @@ chmod +x grafana-*.sh
 
 ## Конфигурация
 ### Основные переменные
-Перед использованием отредактируйте переменные в скриптах:
+Перед использованием отредактируйте переменные в env.example:
 
 ```bash
 # API ключ Grafana (Admin -> API Keys)
-KEY="your_api_key_here"
+KEY="youre key"
 
 # URL Grafana сервера
 HOST="https://your-grafana.example.com"
@@ -74,6 +74,8 @@ ALERT_DIR="/srv/grf_bkp/grafana-alerts-backup/"
 DATA_DIR="/srv/grf_bkp/grafana-data-sources-backup/"
 CONTACT_DIR="/srv/grf_bkp/grafana-contact-points-sources-backup/"
 ```
+
+После переименуйте файл env.example в .env
 
 ### Создание API ключа
 
@@ -86,6 +88,10 @@ CONTACT_DIR="/srv/grf_bkp/grafana-contact-points-sources-backup/"
 4. Скопируйте ключ в переменную KEY
 
 ## Использование
+
+Перед использованием инициализируйте дирректорию и подключите её к вашему удалённому репозиторию для выгрузки бекапов.
+По умолчанию это дирректория - /srv/grf_bkp/ 
+
 ### Бэкап конфигураций
 ```bash
 ./grafana-dashboards-backup-new-test.sh
