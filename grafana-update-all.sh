@@ -1,18 +1,12 @@
-SETCOLOR_SUCCESS="echo -en \\033[1;32m"
-SETCOLOR_FAILURE="echo -en \\033[1;31m"
-SETCOLOR_NORMAL="echo -en \\033[0;39m"
+if [ ! -f ".env" ]; then
+    $SETCOLOR_FAILURE
+    echo "ERROR: .env file not found!"
+    echo "Please copy env.example to .env and configure your settings"
+    $SETCOLOR_NORMAL
+    exit 1
+fi
 
-SETCOLOR_TITLE="echo -en \\033[1;36m" #Fuscia
-SETCOLOR_TITLE_GREEN="echo -en \\033[0;32m" #green
-SETCOLOR_TITLE_PURPLE="echo -en \\033[0;35m" #purple 
-SETCOLOR_NUMBERS="echo -en \\033[0;34m" #BLUE
-
-KEY="youre key" #апи плюч от графаны
-HOST="youre host" #адрес графаны
-DASH_FILE="/srv/grf_bkp/grafana-dashboards-backup/dash.json" # файл с дашбордами
-ALERT_FILE="/srv/grf_bkp/grafana-alerts-backup/alert_rules.json" # файл с алертами
-DATA_FILE="/srv/grf_bkp/grafana-data-sources-backup/data_sources.json" # файл с источниками данных
-CONTACT_FILE="/srv/grf_bkp/grafana-contact-points-sources-backup/contact_points.json" # файл с контакными точками
+source .env
 
 $SETCOLOR_TITLE # задаём цвет
 echo "|-------------------------------START UPDATE------------------------------------|"; # говорим о старте програмы
@@ -79,6 +73,7 @@ done
 $SETCOLOR_TITLE_GREEN
 echo "|----------------------------------FINISHED-------------------------------------|";
 $SETCOLOR_NORMAL
+
 
 $SETCOLOR_TITLE
 echo "|-------------------------------FINISHED UPDATE---------------------------------|";

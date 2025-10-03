@@ -1,18 +1,12 @@
-SETCOLOR_SUCCESS="echo -en \\033[1;32m"
-SETCOLOR_FAILURE="echo -en \\033[1;31m"
-SETCOLOR_NORMAL="echo -en \\033[0;39m"
+if [ ! -f ".env" ]; then
+    $SETCOLOR_FAILURE
+    echo "ERROR: .env file not found!"
+    echo "Please copy env.example to .env and configure your settings"
+    $SETCOLOR_NORMAL
+    exit 1
+fi
 
-SETCOLOR_TITLE="echo -en \\033[1;36m" #Fuscia
-SETCOLOR_TITLE_GREEN="echo -en \\033[0;32m" #green
-SETCOLOR_TITLE_PURPLE="echo -en \\033[0;35m" #purple
-SETCOLOR_NUMBERS="echo -en \\033[0;34m" #BLUE
-
-KEY="youre_key"
-HOST="youre_host"
-DASH_DIR="/srv/grf_bkp/grafana-dashboards-backup/"
-ALERT_DIR="/srv/grf_bkp/grafana-alerts-backup/"
-DATA_DIR="/srv/grf_bkp/grafana-data-sources-backup/"
-CONTACT_DIR="/srv/grf_bkp/grafana-contact-points-sources-backup/"
+source .env
 
 if [ ! -d "$DASH_DIR" ]; then
      mkdir -p "$DASH_DIR"
@@ -91,12 +85,19 @@ echo "|------------------The contact points hasnt been exported-----------------
 $SETCOLOR_NORMAL
 
 
-$SETCOLOR_TITLE
+cd /srv/grf_bkp
+
+CURRENT_REPO=$(git remote get-url origin 2>/dev/null)
+
+ if [ "$CURRENT_REPO" = "$YOUR_SCRIPT_REPO_SSH" ] || [ "$CURRENT_REPO" = "$YOUR_SCRIPT_REPO_HTTPS" ]; then
+   echo "please switch repo"
+   exit 1
+ else
+   git add .
+   git commit -m 'Update configs'
+   git push
+ fi
+
+ $SETCOLOR_TITLE
 echo "|----------------------------------FINISHED-------------------------------------|";
 $SETCOLOR_NORMAL
-
-
-cd /srv/grf_bkp
-git add .
-git commit -m 'Update configs'
-git push
