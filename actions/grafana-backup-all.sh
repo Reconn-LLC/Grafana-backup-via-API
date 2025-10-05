@@ -83,17 +83,141 @@ make_curl_request() {
     fi
 }
 
+# Функция для сохранения отдельных дашбордов
+save_individual_dashboards() {
+    local input_file="$1"
+    local output_dir="$2"
+
+    # Очищаем директорию перед сохранением
+    rm -f "$output_dir"/*.json
+
+    # Определяем формат (Kubernetes CR или стандартный)
+    if jq -e '.kind == "DashboardList"' "$input_file" >/dev/null; then
+        echo "Processing Kubernetes CR format..."
+        total_dashboards=$(jq -r '.items | length' "$input_file")
+        processed=0
+
+        jq -c '.items[]' "$input_file" | while read -r dashboard; do
+            processed=$((processed + 1))
+
+            # Извлекаем имя и UID
+            name=$(echo "$dashboard" | jq -r '.metadata.name // empty')
+            uid=$(echo "$dashboard" | jq -r '.spec.uid // .uid // empty')
+            title=$(echo "$dashboard" | jq -r '.spec.title // .title // "unnamed"')
+
+            # Создаем безопасное имя файла
+            if [ -n "$name" ]; then
+                safe_name=$(echo "$name" | tr '/' '_' | tr ' ' '_')
+                filename="${safe_name}.json"
+            elif [ -n "$uid" ]; then
+                filename="${uid}.json"
+            else
+                filename="dashboard_${processed}.json"
+            fi
+
+            output_file="$output_dir/$filename"
+
+            echo "[$processed/$total_dashboards] Saving: $title -> $filename"
+            echo "$dashboard" | jq '.' > "$output_file"
+        done
+
+    else
+        echo "Processing standard Grafana format..."
+        total_dashboards=$(jq -r 'length' "$input_file")
+        processed=0
+
+        jq -c '.[]' "$input_file" | while read -r dashboard; do
+            processed=$((processed + 1))
+
+            # Извлекаем UID и название
+            uid=$(echo "$dashboard" | jq -r '.uid // empty')
+            title=$(echo "$dashboard" | jq -r '.title // "unnamed"')
+
+            # Создаем безопасное имя файла
+            if [ -n "$uid" ]; then
+                filename="${uid}.json"
+            else
+                safe_title=$(echo "$title" | tr '/' '_' | tr ' ' '_' | tr '[:upper:]' '[:lower:]')
+                filename="${safe_title}.json"
+            fi
+
+            output_file="$output_dir/$filename"
+
+            echo "[$processed/$total_dashboards] Saving: $title -> $filename"
+            echo "$dashboard" | jq '.' > "$output_file"
+        done
+    fi
+}
+
 $SETCOLOR_NUMBERS
 echo "|-------------------------------START COPY DASH---------------------------------|";
 $SETCOLOR_NORMAL
 
-if make_curl_request "$HOST/apis/dashboard.grafana.app/v1beta1/namespaces/default/dashboards" "$DASH_DIR/dash.json" "dashboards"; then
-    $SETCOLOR_TITLE_GREEN
-    echo "|---------------------The dashboard has been exported---------------------------|"
+rm -f "$DASH_DIR"/*.json
+
+# Получаем список всех дашбордов из Grafana
+DASH_LIST_FILE=$(mktemp)
+make_curl_request "$HOST/api/search?query=" "$DASH_LIST_FILE" "dashboard list"
+
+TOTAL_DASHES=$(jq -r '[.[] | select(.type == "dash-db")] | length' "$DASH_LIST_FILE")
+if [ "$TOTAL_DASHES" -eq 0 ]; then
+    $SETCOLOR_FAILURE
+    echo "No dashboards found in Grafana instance at $HOST"
     $SETCOLOR_NORMAL
-else
+    rm -f "$DASH_LIST_FILE"
     exit 1
 fi
+
+$SETCOLOR_TITLE_PURPLE
+echo "Found $TOTAL_DASHES dashboards — exporting..."
+$SETCOLOR_NORMAL
+
+COUNTER=0
+jq -r '.[] | select(.type == "dash-db") | .uid' "$DASH_LIST_FILE" | while read -r DASH_UID; do
+    if [ -z "$DASH_UID" ]; then
+        continue
+    fi
+
+    COUNTER=$((COUNTER + 1))
+    DASHBOARD_RAW=$(curl -sS -H "Authorization: Bearer $KEY" "$HOST/api/dashboards/uid/$DASH_UID")
+
+    # Проверяем, что ответ корректный и содержит dashboard
+    if ! echo "$DASHBOARD_RAW" | jq -e '.dashboard' >/dev/null; then
+        echo "[$COUNTER/$TOTAL_DASHES] Skipping UID=$DASH_UID (invalid response)"
+        continue
+    fi
+
+    TITLE=$(echo "$DASHBOARD_RAW" | jq -r '.dashboard.title // "unnamed"')
+    SAFE_TITLE=$(echo "$TITLE" | tr ' /' '_' | tr '[:upper:]' '[:lower:]')
+    OUTPUT_FILE="$DASH_DIR/$SAFE_TITLE.json"
+
+    # Обновляем schemaVersion и исправляем thresholds
+    DASHBOARD_FIXED=$(echo "$DASHBOARD_RAW" | jq '
+        if .dashboard.schemaVersion < 41 then
+            .dashboard.schemaVersion = 41
+        else
+            .
+        end
+        | .dashboard.panels |= (map(
+            if .fieldConfig? and .fieldConfig.defaults? and .fieldConfig.defaults.thresholds? then
+                .fieldConfig.defaults.thresholds.steps |= map(
+                    if (.value == "") then .value = null else . end
+                )
+            else .
+            end
+        ) // .dashboard.panels)
+    ')
+
+    echo "[$COUNTER/$TOTAL_DASHES] Saving: $TITLE -> $SAFE_TITLE.json"
+    echo "$DASHBOARD_FIXED" | jq '.dashboard' > "$OUTPUT_FILE"
+done
+
+rm -f "$DASH_LIST_FILE"
+
+$SETCOLOR_TITLE_GREEN
+echo "|---------------------Dashboards have been exported successfully----------------|"
+$SETCOLOR_NORMAL
+
 
 $SETCOLOR_NUMBERS
 echo "|------------------------------START COPY ALERT---------------------------------|";
