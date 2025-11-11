@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ ! -f ".env" ]; then
+if [ ! -f "./.env" ]; then
     $SETCOLOR_FAILURE
     echo "ERROR: .env file not found!"
     echo "Please copy env.example to .env and configure your settings"
@@ -8,7 +8,7 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
-source .env
+source $(pwd)/.env
 
 $SETCOLOR_TITLE
 echo "|-------------------------------START UPDATE------------------------------------|"

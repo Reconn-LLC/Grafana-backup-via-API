@@ -6,7 +6,7 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
-source .env
+source $(pwd)/.env
 
 if [ ! -d "$DASH_DIR" ]; then
      mkdir -p "$DASH_DIR"
